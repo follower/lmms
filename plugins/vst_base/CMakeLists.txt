@@ -28,6 +28,20 @@ SET(EXTERNALPROJECT_CMAKE_ARGS
 	"-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
 )
 
+IF(LMMS_BUILD_APPLE) # TODO: Add "AND WANT_VST_NOWINE"?
+	# TODO: Make this part of RemoteVstPlugin CMake?
+	ADD_EXECUTABLE(RemoteVstPlugin "${CMAKE_CURRENT_SOURCE_DIR}/RemoteVstPlugin.cpp")
+	TARGET_LINK_LIBRARIES(RemoteVstPlugin Qt5::Core)
+	TARGET_LINK_LIBRARIES(RemoteVstPlugin -lpthread)
+	SET_TARGET_PROPERTIES(RemoteVstPlugin PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -O0")
+	ADD_CUSTOM_COMMAND(TARGET RemoteVstPlugin POST_BUILD COMMAND "${STRIP}" "$<TARGET_FILE:RemoteVstPlugin>")
+	INSTALL(TARGETS RemoteVstPlugin RUNTIME DESTINATION "${PLUGIN_DIR}")
+
+	IF (WANT_VST_NOWINE)
+	   RETURN()
+	ENDIF()
+ENDIF()
+
 # build 32 bit version of RemoteVstPlugin
 INCLUDE("${CMAKE_CURRENT_LIST_DIR}/RemoteVstPlugin32.cmake")
 # build 64 bit version of RemoteVstPlugin
