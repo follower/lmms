@@ -127,6 +127,7 @@ VstPlugin::VstPlugin( const QString & _plugin ) :
 {
 	setSplittedChannels( true );
 
+#ifndef LMMS_BUILD_APPLE
 	PE::MachineType machineType;
 	try {
 		PE::FileInfo peInfo(_plugin);
@@ -148,6 +149,9 @@ VstPlugin::VstPlugin( const QString & _plugin ) :
 		m_failed = true;
 		return;
 	}
+#else
+	tryLoad( "RemoteVstPlugin" );
+#endif
 
 	setTempo( Engine::getSong()->getTempo() );
 
