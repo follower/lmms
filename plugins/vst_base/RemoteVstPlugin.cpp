@@ -62,6 +62,7 @@
 #else
 #include <QLibrary>
 #include <QtWidgets>
+#include <QtConcurrent>
 #define HWND QMainWindow *
 #define HINSTANCE void *
 #define DWORD int
@@ -335,10 +336,7 @@ public:
 	void idle();
 	void processUIThreadMessages();
 
-#ifndef LMMS_BUILD_APPLE
-	static
-#endif
-	DWORD WINAPI processingThread( LPVOID _param );
+	static DWORD WINAPI processingThread( LPVOID _param );
 	static bool setupMessageWindow();
 	static DWORD WINAPI guiEventLoop();
 #ifndef LMMS_BUILD_APPLE
@@ -1949,12 +1947,7 @@ void RemoteVstPlugin::processUIThreadMessages()
 
 DWORD WINAPI RemoteVstPlugin::processingThread( LPVOID _param )
 {
-#ifndef LMMS_BUILD_APPLE
 	RemoteVstPlugin * _this = static_cast<RemoteVstPlugin *>( _param );
-#else
-// TODO: Handle this better?
-#define _this this
-#endif
 
 	RemotePluginClient::message m;
 	while( ( m = _this->receiveMessage() ).id != IdQuit )
@@ -1982,7 +1975,6 @@ DWORD WINAPI RemoteVstPlugin::processingThread( LPVOID _param )
 			if( !_this->isProcessing() )
 			  {
 			    _this->processUIThreadMessages();
-			    m_app->processEvents();
 			  }
 
 #endif
@@ -2211,7 +2203,18 @@ int main( int _argc, char * * _argv )
 		}
 		RemoteVstPlugin::guiEventLoop();
 #else
-		__plugin->processingThread(nullptr); // TODO: Create thread? // TODO: Handle guiEventLoop?
+#if 1
+		QFutureWatcher<DWORD> processing_thread_watcher;
+
+		QObject::connect(&processing_thread_watcher, SIGNAL(finished()), app, SLOT(quit()), Qt::QueuedConnection);
+
+		QFuture<DWORD> processing_thread_future = QtConcurrent::run(RemoteVstPlugin::processingThread, __plugin);
+
+		processing_thread_watcher.setFuture(processing_thread_future);
+#else
+		QtConcurrent::run(RemoteVstPlugin::processingThread, __plugin);
+#endif
+		app->exec();
 #endif
 	}
 
